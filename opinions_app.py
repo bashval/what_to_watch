@@ -1,6 +1,8 @@
+import csv
 import datetime
 from random import randrange
 
+import click
 from flask import Flask, abort, flash, redirect, render_template, url_for
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
@@ -45,6 +47,8 @@ class Opinion(db.Model):
         index=True,
         default=datetime.datetime.now(datetime.timezone.utc)
     )
+    # new field
+    added_by = db.Column(db.String(64))
 
 
 @app.route('/')
@@ -91,6 +95,20 @@ def page_not_found(error):
 def internal_error(error):
     db.session.rollback()
     return render_template('500.html'), 500
+
+
+@app.cli.command('load_opinions')
+def load_opinions_command():
+    """Loads opinions to DB."""
+    with open('opinions.csv', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        counter = 0
+        for row in reader:
+            opinion = Opinion(**row)
+            db.session.add(opinion)
+            db.session.commit()
+            counter += 1
+    click.echo(f'{counter} opinions loaded')
 
 
 if __name__ == '__main__':
